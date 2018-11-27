@@ -16,8 +16,10 @@ import com.github.javaparser.ast.type.PrimitiveType;
 import com.github.javaparser.ast.type.PrimitiveType.Primitive;
 import com.github.javaparser.ast.type.ReferenceType;
 import com.github.javaparser.ast.type.Type;
+import java.lang.reflect.Field;
 import java.util.Comparator;
 import java.util.Objects;
+import java.util.function.Function;
 
 /**
  * @author Hayden Fields
@@ -30,12 +32,17 @@ public class JavaParserMisc
         
         JavaParser parser = new JavaParser();
         Expression stringExpr = parser.parse(ParseStart.EXPRESSION, Providers.provider("(int)\"asdf\" + \"sdg\"")).getResult().get();
-        Expression intExpr = parser.parse(ParseStart.EXPRESSION, Providers.provider("(true?4:7) + 5")).getResult().get();
-        stringExpr.ifStringLiteralExpr(System.out::println);
-        stringExpr.walk(System.out::println);
+        Expression intExpr = parser.parse(ParseStart.EXPRESSION, Providers.provider("(String)(true?4:7) + (String)5")).getResult().get();
+//        stringExpr.ifStringLiteralExpr(System.out::println);
+//        stringExpr.walk(System.out::println);
         
-        System.out.println(eval(intExpr));
+//        System.out.println(eval(intExpr));
         
+//        System.out.println(((CastExpr)parser.parse(ParseStart.EXPRESSION, Providers.provider("(Bagas)3")).getResult().get()).getTypeAsString());
+        
+        
+        System.out.println(eval(parser.parse(ParseStart.EXPRESSION, Providers.provider("(double)((\"asdf\" == \"\")?4:7) + 5 + 3.5")).getResult().get()));
+        System.out.println(eval(parser.parse(ParseStart.EXPRESSION, Providers.provider("((true || false)?4:7) + 5")).getResult().get()));
     }
     
     public static Object eval(Expression expr)
@@ -67,13 +74,58 @@ public class JavaParserMisc
         else if (expr.isCastExpr())
         {
             CastExpr ce = (CastExpr)expr;
-            ;
-            convertJavaParserTypeToType(ce.getType());
-            return eval(ce.getExpression());
+            Object value = eval(ce.getExpression());
+             
+            return convert(value, ce.getTypeAsString());
         }
         return null;
     }
 
+    public static Object convert(Object value, String type)
+    {
+        if ((type.equals("Boolean") || type.equals("boolean")))
+            {
+                if (value instanceof Boolean)
+                    return (Boolean)value;
+                else if (value instanceof Integer)
+                    return (Boolean)((Integer)value == 0);
+                else if (value instanceof Double)
+                    return (Boolean)((Double)value == 0);
+                else if (value instanceof String)
+                    return (Boolean)(((String)value).equalsIgnoreCase("true")?true:((String)value).equalsIgnoreCase("false")?false:null);
+                else return null;
+            }
+            else if ((type.equals("Integer") || type.equals("int")))
+            {
+                if (value instanceof Boolean)
+                    return (Integer)(((Boolean)value)?1:0);
+                else if (value instanceof Integer)
+                    return (Integer)value;
+                else if (value instanceof Double)
+                    return (Integer)(int)((Double)value).doubleValue();
+                else if (value instanceof String)
+                    return Integer.parseInt((String)value); // can replace with dfa
+                else return null;
+            }
+            else if ((type.equals("Double") || type.equals("double")))
+            {
+                if (value instanceof Boolean)
+                    return (Boolean)value?1:0;
+                else if (value instanceof Integer)
+                    return (Double)(double)((Integer) value).intValue();
+                else if (value instanceof Double)
+                    return (Double)value;
+                else if (value instanceof String)
+                    return Double.parseDouble((String)value); // can replace with dfa
+                else return null;
+            }
+            else if (type.equals("String"))
+            {
+                return String.format("%s", value);
+            }
+        return null;
+    }
+    
     // https://stackoverflow.com/questions/41535413/how-to-infer-the-types-of-all-the-parameters-of-a-function-using-java-parser-and
     // https://github.com/javaparser/javasymbolsolver
     private static Class<?> convertJavaParserTypeToType (Type type)
@@ -118,14 +170,45 @@ public class JavaParserMisc
         }
     }
     
+    // boolean integer float string
+    
+    // 0001 -> do nothing
+    // 0010 -> do nothing
+    // 0011 -> convert both to String
+    // 0100 -> do nothing
+    // 0101 -> convert both to String
+    // 0110 -> convert both to Float
+    // 1000 -> do nothing
+    // 1001 -> convert both to String
+    // 1010 -> convert both to float
+    // 1100 -> convert both to integer
+    
     // allowed values {boolean, int, float, String}
     private static Object performOperation (BinaryExpr.Operator operator, Expression leftExpr, Expression rightExpr)
     {
         Object left = eval(leftExpr);
         Object right = eval(rightExpr);
+        
+        if (left instanceof String || right instanceof String)
+        {
+            left = convert(left, "String");
+            right = convert(right, "String");
+        }
+        else if (right instanceof Double || left instanceof Double)
+        {
+            left = convert(left, "Double");
+            right = convert(right, "Double");
+        }
+        else if (right instanceof Integer || left instanceof Integer)
+        {
+            left = convert(left, "Integer");
+            right = convert(right, "Integer");
+        }
+        
+        
         switch (operator)
         {
-            case OR: return ((Boolean)left) || ((Boolean)right);
+            case OR: return ((Boolean) left) || ((Boolean)right);
             case AND: return ((Boolean)left) && ((Boolean)right);
             case BINARY_OR:
             {
