@@ -20,6 +20,9 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.Stack;
 import java.util.TreeSet;
+import java.util.stream.Collectors;
+import regexproject.NonDeterministicStateMachine;
+import regexproject.NonDeterministicStateMachine.Transition;
 import regexproject.RegexProject;
 import regexproject.RegexProject.Regex;
 import regexproject.RegexProject.RegexElement;
@@ -212,6 +215,39 @@ public class GenerateGraph
                 stack.push(re);
                 tree.push(new Vertex(re.getClass().getSimpleName()));
             }
+        return G;
+    }
+    
+    public static Graph exampleNFA()
+    {
+        NonDeterministicStateMachine nfa = new NonDeterministicStateMachine();
+         
+         nfa.transitions.add(new Transition(0, '0', 1));
+         nfa.transitions.add(new Transition(0, '1', '9', 2));
+         nfa.transitions.add(new Transition(2, '0', '9', 2));
+         nfa.start = 0;
+         nfa.finalStates.addAll(asList(1, 2));
+        return fromNFA(nfa);
+    }
+    
+    public static Graph fromNFA (NonDeterministicStateMachine nfa)
+    {
+        Graph G = new Graph();
+        Map<Integer, Vertex> states = new HashMap<>();
+        for (Transition t : nfa.transitions)
+        {
+            if (!states.containsKey(t.antecedent))
+                states.put(t.antecedent, G.addVertex(new Vertex(String.format("%s", t.antecedent))));
+            if (!states.containsKey(t.consequent))
+                states.put(t.consequent, G.addVertex(new Vertex(String.format("%s", t.consequent))));
+        }
+        for (Transition t : nfa.transitions)
+            G.addEdge
+            (
+                String.join(",", t.condition.stream().map(x -> x.toString()).collect(Collectors.toList())),
+                asList(states.get(t.antecedent), states.get(t.consequent)),
+                Utils.generateMap(states.get(t.consequent), true)
+            );
         return G;
     }
     
