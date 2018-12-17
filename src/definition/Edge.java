@@ -12,6 +12,8 @@ import java.util.TreeSet;
 public class Edge implements Comparable<Edge>
 {
     private static int edgeId = 0;
+
+    // TODO: I don't actually think that this is used anywhere
     public static class OrientedVertex implements Comparable<OrientedVertex>
     {
         Vertex v;
@@ -55,6 +57,11 @@ public class Edge implements Comparable<Edge>
     {
         this(label, vertices, new TreeMap<Vertex, Boolean>());
     }
+    
+    public Edge(String label, Map<Vertex, Boolean> orientations)
+    {
+        this(label, orientations.keySet(), orientations);
+    }
 
     public Edge(String label, Set<Vertex> verticesIn, Map<Vertex, Boolean> orientation)
     {
@@ -97,6 +104,14 @@ public class Edge implements Comparable<Edge>
     public String toString ()
     {
         return "Edge{" + "uniqueId=" + uniqueId + ", label=" + label + ", vertices=" + vertices + '}';
+    }
+    
+    public Edge cloneWithNewId ()
+    {
+        // gets a new id
+        Edge e = new Edge(this.label);
+        e.vertices.forEach((v,b) -> e.vertices.put(v.cloneWithNewId(), b));
+        return e;
     }
 }
 

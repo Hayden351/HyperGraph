@@ -1,5 +1,6 @@
 package definition;
 
+import generate.GenerateGraph;
 import com.github.javaparser.JavaParser;
 import java.io.File;
 import java.io.FileNotFoundException;

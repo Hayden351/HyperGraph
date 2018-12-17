@@ -1,4 +1,4 @@
-package definition;
+package generate;
 
 import collections.GenericTrie;
 import collections.Trie;
@@ -8,6 +8,11 @@ import com.github.javaparser.Providers;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.expr.Expression;
+import definition.Edge;
+import definition.Graph;
+import definition.GraphProperties;
+import definition.Utils;
+import definition.Vertex;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
@@ -19,6 +24,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.Stack;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 import regexproject.NonDeterministicStateMachine;
@@ -32,18 +38,8 @@ import utils.random.RandomUtils;
 /**
  * @author Hayden Fields
  */
-public class GenerateGraph
+public class GenerateGraph extends ExampleGraphs
 {
-    public static Graph fullyConnectedExample ()
-    {
-        Graph G = new Graph();
-        for (int i = 0; i < 8; i++)
-            G.addVertex(String.format("%d", i));
-        for (int i = 0; i < 20; i++)
-            G.addEdge(String.format("%d", i), G.vertices);
-        return G;
-    }
-    
     public static Graph fullyConnected (Integer vertices, Integer edges)
     {
         Graph G = new Graph();
@@ -113,6 +109,7 @@ public class GenerateGraph
     public static void main (String[] args)
     {
         wikiTrie();
+        minimumSpanningTree();
     }
     public static Graph fromTrie(Trie trie)
     {
@@ -148,49 +145,6 @@ public class GenerateGraph
         return G;
     }
     
-    public static Graph wikiTrie ()
-    {
-        Trie trie = new Trie();
-        trie.add("A");
-        trie.add("to");
-        trie.add("tea");
-        trie.add("ted");
-        trie.add("ten");
-        trie.add("i");
-        trie.add("in");
-        trie.add("inn");
-        return fromTrie(trie);
-    }
-    
-    public static Graph wikiGenericTrie ()
-    {
-        GenericTrie<Character> wikiTrie = new GenericTrie<>();
-        wikiTrie.add(asList('A'));
-        wikiTrie.add(asList('t', 'o'));
-        wikiTrie.add(asList('t', 'e','a'));
-        wikiTrie.add(asList('t', 'e','d'));
-        wikiTrie.add(asList('t', 'e','n'));
-        wikiTrie.add(asList('i'));
-        wikiTrie.add(asList('i', 'n'));
-        wikiTrie.add(asList('i', 'n','n'));
-        
-        return fromTrie(wikiTrie);
-    }
-    
-    public static Graph exampleRegex ()
-    {
-        List<RegexElement> regex = new ArrayList<>();
-        
-        regex.add(new RegexProject.StringLiteral("0"));
-        regex.add(new RegexProject.MatchSome(ch -> '1' <= ch && ch <= '9'));
-        regex.add(new RegexProject.MatchSome(ch -> '0' <= ch && ch <= '9'));
-        regex.add(new RegexProject.Repitition(0));
-        regex.add(new RegexProject.Concatenation());
-        regex.add(new RegexProject.Union());
-        
-        return fromPostfixRegex(new Regex(regex));
-    }
-    
     public static Graph fromPostfixRegex (Regex regex)
     {
         Graph G = new Graph();
@@ -218,18 +172,6 @@ public class GenerateGraph
         return G;
     }
     
-    public static Graph exampleNFA()
-    {
-        NonDeterministicStateMachine nfa = new NonDeterministicStateMachine();
-         
-         nfa.transitions.add(new Transition(0, '0', 1));
-         nfa.transitions.add(new Transition(0, '1', '9', 2));
-         nfa.transitions.add(new Transition(2, '0', '9', 2));
-         nfa.start = 0;
-         nfa.finalStates.addAll(asList(1, 2));
-        return fromNFA(nfa);
-    }
-    
     public static Graph fromNFA (NonDeterministicStateMachine nfa)
     {
         Graph G = new Graph();
@@ -251,37 +193,25 @@ public class GenerateGraph
         return G;
     }
     
-    public static Graph tree()
+    public static List<Graph> kruskalGraphs(Graph G)
     {
-        Graph G = new Graph();
+        List<Graph> graphs = new ArrayList<>(asList(G));
+        List<Vertex> vertices = new ArrayList<>(G.vertices);
+        List<Edge> edges = new ArrayList<>(G.edges);
+        edges.sort((a,b) -> -(Integer.parseInt(a.label) - Integer.parseInt(b.label)));
         
-        Vertex root = G.addVertex(new Vertex("R"));
-        Vertex A =    G.addVertex(new Vertex("A"));
-        Vertex B =    G.addVertex(new Vertex("B"));
-        Vertex A1 =   G.addVertex(new Vertex("A"));
-        Vertex B1 =   G.addVertex(new Vertex("B"));
-        
-        G.addEdge("", asList(root, A), Utils.<Vertex, Boolean>generateMap(A, true));
-        G.addEdge("", asList(A, B)   , Utils.<Vertex, Boolean>generateMap(B, true));
-        G.addEdge("", asList(A, A1)  , Utils.<Vertex, Boolean>generateMap(A1, true));
-        G.addEdge("", asList(A1, B1) , Utils.<Vertex, Boolean>generateMap(B1, true));
-        return G;
+        int pos = 0;
+        while (edges.size() != vertices.size() - 1)
+        {
+            List<Edge> attempt = new ArrayList<>(edges);
+            attempt.remove(pos);
+            if (GraphProperties.isConnected(vertices, attempt))
+            {
+                edges.remove(pos);
+                graphs.add(new Graph(vertices, new ArrayList<>(edges)));
+            }
+            else pos++;
+        }
+        return graphs;
     }
-    public static Graph subTree()
-    {
-        Graph G = new Graph();
-        
-        
-        Vertex A =    G.addVertex(new Vertex("A"));
-        Vertex B =    G.addVertex(new Vertex("B"));
-        Vertex A1 =   G.addVertex(new Vertex("A"));
-        Vertex B1 =   G.addVertex(new Vertex("B"));
-        
-        G.addEdge("", asList(A, B)   , Utils.<Vertex, Boolean>generateMap(B, true));
-        G.addEdge("", asList(A, A1)  , Utils.<Vertex, Boolean>generateMap(A1, true));
-        G.addEdge("", asList(A1, B1) , Utils.<Vertex, Boolean>generateMap(B1, true));
-        return G;
-    }
-    
-    
 }

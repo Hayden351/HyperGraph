@@ -2,6 +2,7 @@ package definition;
 
 import java.util.ArrayList;
 import static java.util.Arrays.asList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -41,7 +42,7 @@ public class GraphProperties
         neighbors.remove(v);
         return neighbors;
     }
-     public static Set<Vertex> getNeighborsInclusive (Graph G, Vertex v)
+    public static Set<Vertex> getNeighborsInclusive (Graph G, Vertex v)
     {
         Set<Vertex> neighbors = new HashSet<>();
         for (Edge e : G.edges)
@@ -49,15 +50,23 @@ public class GraphProperties
                 neighbors.addAll(e.vertices.keySet());
        return neighbors;
     }
+     
     public static Set<Vertex> getNeighbors (Graph G, Vertex v)
     {
+        return getNeighbors(G.edges, v);
+    }
+    
+    public static Set<Vertex> getNeighbors (Iterable<Edge> edges, Vertex v)
+    {
         Set<Vertex> neighbors = new HashSet<>();
-        for (Edge e : G.edges)
+        for (Edge e : edges)
             if (e.vertices.keySet().contains(v))
                 neighbors.addAll(e.vertices.keySet());
         neighbors.remove(v);
         return neighbors;
     }
+    
+    
     public static Set<Vertex> getReachable(Graph G, Vertex v)
     {
         Set<Vertex> neighbors = new HashSet<>();
@@ -165,5 +174,31 @@ public class GraphProperties
                 break;
         }
         return result;
+    }
+
+    private static boolean isPathAux (List<Edge> edges, Vertex v, Vertex u, HashSet<Vertex> visited)
+    {
+        for (Vertex neighbor : GraphProperties.getNeighbors(edges, v))
+            if (neighbor.equals(u))
+                return true; // we found it
+            else if (visited.add(neighbor))
+                if (isPathAux(edges, neighbor, u, visited))
+                    return true;
+        return false;
+    }
+
+    public static boolean isConnected (List<Vertex> vertices, List<Edge> edges)
+    {
+        for (Vertex v : vertices)
+            for (Vertex u : vertices)
+                if (!v.equals(u))
+                    if (!isPath(edges, v, u))
+                        return false;
+        return true;
+    }
+
+    private static boolean isPath (List<Edge> edges, Vertex v, Vertex u)
+    {
+        return v.equals(u) || isPathAux(edges, v, u, new HashSet<>());
     }
 }

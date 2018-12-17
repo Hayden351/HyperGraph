@@ -1,6 +1,8 @@
 package definition;
 
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -18,6 +20,12 @@ public class Graph
     {
         vertices = new TreeSet<>();
         edges = new TreeSet<>();
+    }
+
+    public Graph (Collection<Vertex> vertices, Collection<Edge> edges)
+    {
+        this.vertices = new TreeSet<>(vertices);
+        this.edges = new TreeSet<>(edges);
     }
 
     public Vertex addVertex(String label)
@@ -43,6 +51,12 @@ public class Graph
         edges.add(e);
         return e;
     }
+    
+    public Edge addEdge(Edge e)
+    {
+        edges.add(e);
+        return e;
+    }
 
     public Iterable<Vertex> vertices() {
         return vertices;
@@ -65,5 +79,16 @@ public class Graph
                 return v;
         return null;
     }
-    
+
+    public Graph createDistinctCopy ()
+    {
+        Graph G = new Graph();
+        
+        for (Edge e: this.edges)
+            G.addEdge(e.cloneWithNewId());
+        for (Edge e : G.edges)
+            for (Vertex v : e.vertices())
+                G.addVertex(v);
+        return G;
+    }
 }

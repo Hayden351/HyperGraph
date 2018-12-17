@@ -1,5 +1,6 @@
 package definition;
 
+import generate.GenerateGraph;
 import java.util.ArrayList;
 import static java.util.Arrays.asList;
 import java.util.HashSet;

@@ -12,6 +12,7 @@ public class Vertex implements Comparable<Vertex>
 {
     private static int vertexId = 0;
     
+    // when these values change, create new constructor
     public final int uniqueId;
     public String label;
 
@@ -65,4 +66,9 @@ public class Vertex implements Comparable<Vertex>
         hash = 31 * hash + Objects.hashCode(v.label);
         return hash;
     };
+
+    public Vertex cloneWithNewId ()
+    {
+        return new Vertex(this.label);
+    }
 }
