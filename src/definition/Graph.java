@@ -1,5 +1,6 @@
 package definition;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -57,6 +58,15 @@ public class Graph
         edges.add(e);
         return e;
     }
+    
+    public Edge addEdge(Collection<Vertex> vertices)
+    {
+        return addEdge("", vertices);
+    }
+    public Edge addEdge (Collection<Vertex> vertices, Map<Vertex, Boolean> orientation) 
+    {
+        return addEdge("", vertices, orientation);
+    }
 
     public Iterable<Vertex> vertices() {
         return vertices;
@@ -90,5 +100,21 @@ public class Graph
             for (Vertex v : e.vertices())
                 G.addVertex(v);
         return G;
+    }
+
+    public boolean addAllVertices (List<Vertex> list)
+    {
+        boolean result = false;
+        for (Vertex v : list)
+            result |= (addVertex(v) != null);
+        return result;
+    }
+
+    public Vertex findFirstVertexByLabel (String value)
+    {
+        for (Vertex v : this.vertices())
+            if (v.label.equals(value))
+                return v;
+        return null;
     }
 }

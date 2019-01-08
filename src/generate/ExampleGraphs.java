@@ -9,10 +9,13 @@ import static generate.GenerateGraph.fromNFA;
 import static generate.GenerateGraph.fromPostfixRegex;
 import static generate.GenerateGraph.fromTrie;
 import static generate.GenerateGraph.kruskalGraphs;
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import static java.util.Arrays.asList;
 import java.util.List;
 import regexproject.NonDeterministicStateMachine;
+import regexproject.RegexNode;
 import regexproject.RegexProject;
 
 /**
@@ -64,8 +67,8 @@ public class ExampleGraphs
         List<RegexProject.RegexElement> regex = new ArrayList<>();
         
         regex.add(new RegexProject.StringLiteral("0"));
-        regex.add(new RegexProject.MatchSome(ch -> '1' <= ch && ch <= '9'));
-        regex.add(new RegexProject.MatchSome(ch -> '0' <= ch && ch <= '9'));
+        regex.add(new RegexProject.MatchSome('1', '9'));
+        regex.add(new RegexProject.MatchSome('0', '9'));
         regex.add(new RegexProject.Repitition(0));
         regex.add(new RegexProject.Concatenation());
         regex.add(new RegexProject.Union());
@@ -107,7 +110,7 @@ public class ExampleGraphs
         return G;
     }
     
-    public static List<Graph> minimumSpanningTree()
+    public static List<Graph> minimumSpanningTreeExample()
     {
         Graph G = new Graph();
         Vertex A = new Vertex("A");
@@ -139,7 +142,6 @@ public class ExampleGraphs
         return kruskalGraphs(G);
     }
     
-    
     public static Graph exampleNFA()
     {
         NonDeterministicStateMachine nfa = new NonDeterministicStateMachine();
@@ -152,4 +154,54 @@ public class ExampleGraphs
         return fromNFA(nfa);
     }
     
+    public static Graph exampleRegexToNfa()
+    {
+        List<RegexProject.RegexElement> regex = new ArrayList<>();
+        
+        regex.add(new RegexProject.StringLiteral("0"));
+        regex.add(new RegexProject.MatchSome('1', '9'));
+        regex.add(new RegexProject.MatchSome('0', '9'));
+        regex.add(new RegexProject.Repitition(0));
+        regex.add(new RegexProject.Concatenation());
+        regex.add(new RegexProject.Union());
+        
+        RegexNode result = RegexNode.fromPostFixExpression(regex);
+        
+        RegexNode.preOrderTraversal(System.out, result);
+        
+        Graph G = GenerateGraph.regexToNfa(result);
+        System.out.printf("number of edges : %s\n", G.edges.size());
+        return G;
+    }
+    
+    public static List<Graph> dfaNfa()
+    {
+        return new ArrayList<>(asList(exampleNFA(), exampleRegexToNfa()));
+    }
+    
+    public static Graph exampleMerge()
+    {
+        Graph G = new Graph();
+        Vertex predIn1 = new Vertex("");
+        Vertex predIn2 = new Vertex("");
+        
+        Vertex in = new Vertex(""); G.addEdge("d", new ArrayList<>(asList(in)), Utils.generateMap(in, true));
+        G.addEdge("a", new ArrayList<>(asList(predIn1, in)), Utils.generateMap(in, true));
+        G.addEdge("b", new ArrayList<>(asList(predIn2, in)), Utils.generateMap(in, true));
+        Vertex out = new Vertex(""); G.addEdge("e", new ArrayList<>(asList(out)));
+        G.addEdge("\u03B5", new ArrayList<>(asList(in, out)), Utils.generateMap(out, true));
+        
+        Vertex consOut1 = new Vertex("");
+        Vertex consOut2 = new Vertex("");
+        G.addEdge("b", new ArrayList<>(asList(out, consOut1)), Utils.generateMap(consOut1, true));
+        G.addEdge("c", new ArrayList<>(asList(out, consOut2)), Utils.generateMap(consOut2, true));
+        
+        G.addAllVertices(new ArrayList<>(asList(predIn1, predIn2, in, out, consOut1, consOut2)));
+        return G;
+    }
+    public static Graph from() throws IOException
+    {
+//        throw new NullPointerException(new File("").getCanonicalPath());
+        return GenerateGraph.undirectedLabeledGraphFromFile("testFile");
+    }
 }

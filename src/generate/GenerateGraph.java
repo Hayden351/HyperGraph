@@ -13,8 +13,12 @@ import definition.Graph;
 import definition.GraphProperties;
 import definition.Utils;
 import definition.Vertex;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import static java.util.Arrays.asList;
 import java.util.HashMap;
@@ -26,13 +30,20 @@ import java.util.Set;
 import java.util.Stack;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.function.Function;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import regexproject.CharRange;
 import regexproject.NonDeterministicStateMachine;
 import regexproject.NonDeterministicStateMachine.Transition;
+import regexproject.RegexNode;
 import regexproject.RegexProject;
 import regexproject.RegexProject.Regex;
 import regexproject.RegexProject.RegexElement;
 import regexproject.RegexProject.RegexOperation;
+import regexproject.StateMachine;
 import utils.random.RandomUtils;
 
 /**
@@ -105,24 +116,20 @@ public class GenerateGraph extends ExampleGraphs
         return fromNode(new JavaParser().parse(ParseStart.EXPRESSION, Providers.provider(expr)).getResult().get());
     }
     
-    
-    public static void main (String[] args)
-    {
-        wikiTrie();
-        minimumSpanningTree();
-    }
     public static Graph fromTrie(Trie trie)
     {
         Graph G = new Graph();
         Map<String, Vertex> map = new HashMap<>();
         trie.preorder(sequence ->
         {
-            Vertex v = G.addVertex(new Vertex(sequence.toString()));
+            Vertex v = G.addVertex(new Vertex(sequence));
             
             map.put(sequence, v);
             
             if (sequence.length() >= 1)
-                G.addEdge(""+sequence.charAt(sequence.length() - 1), new TreeSet<>(asList(map.get(sequence.substring(0, sequence.length() - 1)), v)), Utils.<Vertex, Boolean>generateMap(v, true));
+                G.addEdge(String.format("%c", sequence.charAt(sequence.length() - 1)),
+                          new TreeSet<>(asList(map.get(sequence.substring(0, sequence.length() - 1)), v)),
+                          Utils.<Vertex, Boolean>generateMap(v, true));
         });
         return G;
     }
@@ -143,6 +150,11 @@ public class GenerateGraph extends ExampleGraphs
                 G.addEdge("", new TreeSet<>(asList(map.get(parentSequence), v)), Utils.<Vertex, Boolean>generateMap(v, true));
         });
         return G;
+    }
+    
+    public static RegexNode fromPostfixRegexToRegexAst (Regex regex)
+    {
+        return null;
     }
     
     public static Graph fromPostfixRegex (Regex regex)
@@ -213,5 +225,217 @@ public class GenerateGraph extends ExampleGraphs
             else pos++;
         }
         return graphs;
+    }
+    
+    public static Graph regexToNfa(RegexNode regex)
+    {
+        Graph G = new Graph();
+        StateMachine nfa = regexToNfaAux(regex);
+        
+        System.out.println("");
+        System.out.println(nfa);
+        System.out.println("");
+        
+        for (StateMachine.Vertex vertex : nfa.getStates())
+            G.addVertex(String.format("%d", vertex.state));
+        for (AbstractMap.SimpleEntry<AbstractMap.SimpleEntry<Integer, List<CharRange>>, Integer> transition : nfa.getTransitions())
+        {
+            Vertex v = G.findFirstVertexByLabel(String.format("%d", transition.getKey().getKey()));
+            Vertex u = G.findFirstVertexByLabel(String.format("%d", transition.getValue()));
+            G.addEdge(String.format("%s", transition.getKey().getValue()), asList(v, u), Utils.generateMap(u, true));
+        }
+        
+        return G;
+    }
+    
+    public static StateMachine regexToNfaAux(RegexNode regex)
+    {
+        RegexElement element = regex.element;
+        System.out.println(element.getClass());
+        if (element instanceof RegexProject.Concatenation)
+        {
+            StateMachine lValue = regexToNfaAux (regex.children.get(1));
+            StateMachine rValue = regexToNfaAux (regex.children.get(0)).upto(lValue.largestStateValue() + 1);
+            
+            System.out.println("");
+            System.out.print(lValue);
+            System.out.println("   *  concat  *  ");
+            System.out.print(rValue);
+            
+            
+            for (StateMachine.Vertex vertex : lValue.getFinalStates())
+                lValue.addTransition(vertex.state, '\u03B5', rValue.startState.state);
+            lValue.finalStates = rValue.finalStates;
+            for (AbstractMap.SimpleEntry<AbstractMap.SimpleEntry<Integer, List<CharRange>>, Integer> transition : rValue.getTransitions())
+                lValue.addTransition(transition.getKey().getKey(), transition.getKey().getValue(), transition.getValue());
+            System.out.println("-->");
+            System.out.println(lValue);
+            return lValue;
+        }
+        else if (element instanceof RegexProject.Intersection)
+            ;
+        else if (element instanceof RegexProject.MatchSome)
+        {
+            RegexProject.MatchSome matchSome = (RegexProject.MatchSome)element;
+            StateMachine dfa = new StateMachine();
+            dfa.setStartState(0);
+            dfa.addTransition(0, matchSome.charRanges, 1);
+            dfa.addFinalState(1);
+            
+            System.out.println(dfa);
+
+            return dfa;
+        }
+        else if (element instanceof RegexProject.Negation)
+        {
+            RegexProject.Negation negation = (RegexProject.Negation)element;
+            StateMachine dfa = regexToNfaAux (regex.children.get(0));
+            // TODO: resolve overlapping state conflict
+            Set<StateMachine.Vertex> universe = dfa.getStates();
+            Set<Integer> inverse = new HashSet<>();
+
+            for (StateMachine.Vertex state : universe)
+                if (!dfa.finalStates.contains(state.state))
+                    inverse.add(state.state);
+            dfa.finalStates = inverse;
+
+            return dfa;
+        }
+        else if (element instanceof RegexProject.Repitition)
+        {
+            StateMachine lValue = regexToNfaAux (regex.children.get(0));
+            
+            for (StateMachine.Vertex vertex : lValue.getFinalStates())
+                lValue.addTransition(vertex.state, '\u03B5', lValue.startState.state);
+            System.out.println("Repitition");
+            System.out.println(lValue);
+            return lValue;
+        }
+        else if (element instanceof RegexProject.StringLiteral)
+        {
+            RegexProject.StringLiteral stringLiteral = (RegexProject.StringLiteral)element;
+            StateMachine dfa = new StateMachine();
+
+            dfa.setStartState(0);
+            int i = 0;
+            for (; i < stringLiteral.literal.length(); i++)
+                dfa.addTransition(i, stringLiteral.literal.charAt(i), i + 1);
+            dfa.addFinalState(i);
+            
+            System.out.println(dfa);
+
+            return dfa;
+        }
+        else if (element instanceof RegexProject.Union)   
+        {
+            StateMachine result = new StateMachine();
+            result.setStartState(0);
+            StateMachine lValue = regexToNfaAux (regex.children.get(0)).upto(1);
+
+            // TODO: used to be after but should be before probably
+            result.addTransition(0, '\u03B5', lValue.startState.state);
+            for (AbstractMap.SimpleEntry<AbstractMap.SimpleEntry<Integer, List<CharRange>>, Integer> transition : lValue.getTransitions())
+                result.addTransition(transition.getKey().getKey(), transition.getKey().getValue(), transition.getValue());
+            StateMachine rValue = regexToNfaAux (regex.children.get(1)).upto(lValue.largestStateValue() + 1);
+            result.addTransition(0, '\u03B5', rValue.startState.state);
+            for (AbstractMap.SimpleEntry<AbstractMap.SimpleEntry<Integer, List<CharRange>>, Integer> transition : rValue.getTransitions())
+                result.addTransition(transition.getKey().getKey(), transition.getKey().getValue(), transition.getValue());
+            
+            return result;
+        }
+        else 
+            throw new IllegalArgumentException(String.format("Must add another case to %s.%s", StateMachine.class, "regexToNfaAux"));
+        return null;
+    }
+    
+    public static List<Graph> regexToAstAndDfa(Regex regex)
+    {
+        List<Graph> graphs = new ArrayList<>();
+        
+        RegexNode tree = RegexNode.fromPostFixExpression(regex);
+        
+        for (RegexNode v : tree)
+            convertToDfaToGraph(v);
+        return graphs;
+    }
+
+    private static void convertToDfaToGraph (RegexNode v)
+    {
+        
+    }
+    
+    public static Graph undirectedUnlabeledGraphFrom(String str)
+    {
+        return aux(str, x -> asList(x.split("\n")));
+    }
+    
+    public static Graph undirectedUnlabeledGraphFromFile(String file)
+    {
+        return undirectedUnlabeledGraphFromFile(new File(file));
+    }
+    
+    public static Graph undirectedUnlabeledGraphFromFile(File file)
+    {
+        return aux(file, f ->
+        {
+            try (BufferedReader in = new BufferedReader(new FileReader(f)))
+                { return in.lines().collect(Collectors.toList()); } 
+            catch (Exception ex)
+                { return null; } 
+        } );
+    }
+    
+    
+    public static <T> Graph aux(T source, Function<T, List<String>> toLines)
+    {
+        Graph G = new Graph();
+        List<String> lines = toLines.apply(source);
+        Vertex[] vertices = new Vertex[lines.size()];
+        
+        for (int i =0; i < lines.size(); i++)
+        {
+            String[] elements = lines.get(i).split("\\s+");
+            for (int j = 0; j < elements.length; j++)
+            {
+                if ("1".equals(elements[j]))
+                    G.addEdge(asList(vertices[i], vertices[j]));
+            }
+        }
+        return G;
+    }
+    public static Graph undirectedLabeledGraphFromFile(String file)
+    {
+        return undirectedLabeledGraphFromFile(new File(file));
+    }
+    
+    public static Graph undirectedLabeledGraphFromFile(File file)
+    {
+        Graph G = new Graph();
+        
+        try (BufferedReader in = new BufferedReader(new FileReader(file)))
+        {
+            String[] labels = in.readLine().split("\\s+");
+            Vertex[] vertices = new Vertex[labels.length];
+            for (int i = 0; i < labels.length; i++)
+                vertices[i] = G.addVertex(new Vertex(labels[i]));
+            for (int i = 0; i < labels.length; i++)
+            {
+                String[] edgeLabels = in.readLine().split("\\s+");
+                for (int j = 0; j < labels.length; j++)
+                {
+                    if ("_".equals(edgeLabels[j])) // no edge
+                        ;
+                    else if ("%".equals(edgeLabels[j])) // unlabeled edge
+                        G.addEdge(asList(vertices[i], vertices[j]), Utils.generateMap(vertices[j], true)); 
+                    else  // labeled edge
+                        G.addEdge(edgeLabels[j], asList(vertices[i], vertices[j]), Utils.generateMap(vertices[j], true));
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            ; // exceptional
+        }
+        return G;
     }
 }
