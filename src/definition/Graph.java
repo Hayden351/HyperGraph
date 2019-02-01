@@ -1,5 +1,12 @@
 package definition;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -8,6 +15,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * @author Hayden Fields
@@ -115,6 +127,56 @@ public class Graph
         for (Vertex v : this.vertices())
             if (v.label.equals(value))
                 return v;
+        return null;
+    }
+    
+    public static void main (String[] args)
+    {
+        generate.ExampleGraphs.wikiGenericTrie().serializeToFile("wikiTrie.gr");
+        
+        Graph G = Graph.deserializeFromFile("wikiTrie.gr");
+        System.out.println(G);
+    }
+    
+    public boolean serializeToFile(String relativeFilePath)
+    {
+        return Graph.serializeToFile(this, relativeFilePath);
+    }
+    
+    public static boolean serializeToFile(Graph G, String relativeFilePath)
+    {
+        try (PrintStream out = new PrintStream(new File(relativeFilePath)))
+        {
+            out.println(String.join(",", G.vertices.stream().map(
+                v -> String.format("(%s~%s)", v.uniqueId, v.label)
+            ).collect(Collectors.toList())));
+            out.println(String.join(",", G.edges.stream().map(
+                x -> String.format("(%s~%s~%s)", x.uniqueId, x.label, x.vertices.entrySet().stream().map(p -> String.format("((%s~%s)~%s)", p.getKey().uniqueId, p.getKey().label, p.getValue())).collect(Collectors.toList()))
+            ).collect(Collectors.toList())));
+            System.out.println(String.join(",", G.vertices.stream().map(
+                x -> String.format("(%s~%s)", x.uniqueId, x.label)
+            ).collect(Collectors.toList())));
+            System.out.println(String.join(",", G.edges.stream().map(
+                x -> String.format("(%s~%s~%s)", x.uniqueId, x.label, x.vertices.entrySet().stream().map(p -> String.format("((%s~%s)~%s)", p.getKey().uniqueId, p.getKey().label, p.getValue())).collect(Collectors.toList()))
+            ).collect(Collectors.toList())));
+            return true;
+        } catch (FileNotFoundException ex) {}
+        return false;
+    }
+    
+    public static Graph deserializeFromFile(String relativeFilePath)
+    {
+        Graph G = new Graph();
+        try (BufferedReader in = new BufferedReader(new FileReader(new File(relativeFilePath))))
+        {
+            String vertices = in.readLine();
+            Pattern p = Pattern.compile("\\((.*?)~(.*?)\\),?");
+            Matcher m = p.matcher(vertices);
+            for (int i = 0; i < m.groupCount(); i++)
+                System.out.println(m.group(i));
+            
+            return G;
+        } catch (IOException ex) {}
         return null;
     }
 }
