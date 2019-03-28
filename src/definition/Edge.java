@@ -1,6 +1,10 @@
 package definition;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.JsonNode;
 import definition.Vertex;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -41,7 +45,15 @@ public class Edge implements Comparable<Edge>
     public final int uniqueId;
 
     public String label;
-    public Map<Vertex, Boolean> vertices;
+    @JsonIgnore public Map<Vertex, Boolean> orientations;
+    @JsonProperty("orientations") public Map<String, Boolean> verticesJsonRepresentation()
+    {
+        Map<String, Boolean> jsonOrientations = new HashMap<>();
+        for (Vertex v : orientations.keySet())
+            jsonOrientations.put(String.format("%d", v.uniqueId), orientations.get(v));
+        return jsonOrientations;
+    }
+    
 
     public Edge()
     {
@@ -65,32 +77,44 @@ public class Edge implements Comparable<Edge>
 
     public Edge(String label, Set<Vertex> verticesIn, Map<Vertex, Boolean> orientation)
     {
-        uniqueId = edgeId++;
+        this(edgeId++, label, verticesIn, orientation);
+    }
+    public Edge(int id, String label, Set<Vertex> verticesIn, Map<Vertex, Boolean> orientation)
+    {
+        uniqueId = id;
+        // so that invariant that the edgeId has a unused id will be maintained
+        if (edgeId <= uniqueId)
+            edgeId = uniqueId + 1;
 
         this.label = label;
-        this.vertices = new TreeMap<>();
+        this.orientations = new TreeMap<>();
         
         // orientation passed in could change over time so lets get our own copy
         for (Vertex v : verticesIn)
             if (orientation.containsKey(v))
-                this.vertices.put(v, orientation.get(v));
+                this.orientations.put(v, orientation.get(v));
             else
-                this.vertices.put(v, false);
+                this.orientations.put(v, false);
+    }
+    
+    public Edge (int uniqueId, String label, Map<Vertex, Boolean> orientations)
+    {
+        this(uniqueId, label, orientations.keySet(), orientations);
     }
 
     public Set<Vertex> vertices ()
     {
-        return new TreeSet<>(vertices.keySet());
+        return new TreeSet<>(orientations.keySet());
     }
 
     public boolean sameConnections (Edge e)
     {
-        return e.vertices.keySet().equals(vertices.keySet());
+        return e.orientations.keySet().equals(orientations.keySet());
     }
 
     public boolean orientedTowards (Vertex v)
     {
-        Boolean value = vertices.get(v);
+        Boolean value = orientations.get(v);
         return value != null && value;
     }
 
@@ -103,14 +127,14 @@ public class Edge implements Comparable<Edge>
     @Override
     public String toString ()
     {
-        return "Edge{" + "uniqueId=" + uniqueId + ", label=" + label + ", vertices=" + vertices + '}';
+        return "Edge{" + "uniqueId=" + uniqueId + ", label=" + label + ", vertices=" + orientations + '}';
     }
     
     public Edge cloneWithNewId ()
     {
         // gets a new id
         Edge e = new Edge(this.label);
-        e.vertices.forEach((v,b) -> e.vertices.put(v.cloneWithNewId(), b));
+        e.orientations.forEach((v,b) -> e.orientations.put(v.cloneWithNewId(), b));
         return e;
     }
 }

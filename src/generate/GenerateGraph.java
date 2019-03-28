@@ -2,6 +2,8 @@ package generate;
 
 import collections.GenericTrie;
 import collections.Trie;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParseStart;
 import com.github.javaparser.Providers;
@@ -18,6 +20,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import static java.util.Arrays.asList;
@@ -366,7 +369,7 @@ public class GenerateGraph extends ExampleGraphs
     
     public static Graph undirectedUnlabeledGraphFrom(String str)
     {
-        return aux(str, x -> asList(x.split("\n")));
+        return aux(str, x -> asList(x.split("~|\n")));
     }
     
     public static Graph undirectedUnlabeledGraphFromFile(String file)
@@ -390,7 +393,11 @@ public class GenerateGraph extends ExampleGraphs
     {
         Graph G = new Graph();
         List<String> lines = toLines.apply(source);
-        Vertex[] vertices = new Vertex[lines.size()];
+        List<Vertex> vertices = new ArrayList<>();
+        for (int i = 0; i < lines.size(); i++)
+            vertices.add(new Vertex());
+        
+        G.addAllVertices(vertices);
         
         for (int i =0; i < lines.size(); i++)
         {
@@ -398,7 +405,7 @@ public class GenerateGraph extends ExampleGraphs
             for (int j = 0; j < elements.length; j++)
             {
                 if ("1".equals(elements[j]))
-                    G.addEdge(asList(vertices[i], vertices[j]));
+                    G.addEdge(asList(vertices.get(i), vertices.get(j)));
             }
         }
         return G;
@@ -438,4 +445,234 @@ public class GenerateGraph extends ExampleGraphs
         }
         return G;
     }
+    
+    /*
+    expects input like
+    {
+        vertices :
+        [
+    
+        ]
+        edges :
+        [
+        ]
+    }
+    */
+    public static Graph graphFromJsonString(String json) throws IOException
+    {
+        Graph G = new Graph();
+        
+        ObjectMapper mapper = new ObjectMapper();
+        
+        mapper.readTree(json);
+        
+        return G;
+    }
+    public static Graph graphFromJsonFile(String json) throws IOException
+    {
+        return Graph.unmarshallGraph(new ObjectMapper().readTree(new File(json)));
+    }
+    public static void main (String[] args) throws IOException
+    {
+//         jsonStringToGraph(ExampleGraphs.wikiTrie());
+        graphFromJsonString("{}");
+        
+        String filepath = "C:\\Users\\DarkFight753\\OneDrive\\NBMisc\\DrawHyperGraph\\src\\draw\\json";
+        System.out.println(graphFromJsonFile(filepath));;
+    }
+    
+    public static String jsonStringToGraph(Graph G) throws IOException
+    {
+        ObjectMapper objectMapper = new ObjectMapper();
+        
+        System.out.println(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(G));;
+        
+        System.out.println();
+        
+        Graph H = Graph.unmarshallGraph(objectMapper.readTree(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(G)));
+        
+        G.vertices().forEach(System.out::println);
+        System.out.println("");
+        H.vertices().forEach(System.out::println);
+        System.out.println("");
+        
+        G.edges.forEach(System.out::println);
+        System.out.println("");
+        H.edges.forEach(System.out::println);
+        System.out.println("");
+            
+        
+        
+        return null;
+    }
+    
 }
+
+
+/*
+{
+  "vertices" : [ {
+    "uniqueId" : 0,
+    "label" : ""
+  }, {
+    "uniqueId" : 1,
+    "label" : "A"
+  }, {
+    "uniqueId" : 2,
+    "label" : "t"
+  }, {
+    "uniqueId" : 3,
+    "label" : "to"
+  }, {
+    "uniqueId" : 4,
+    "label" : "te"
+  }, {
+    "uniqueId" : 5,
+    "label" : "tea"
+  }, {
+    "uniqueId" : 6,
+    "label" : "ted"
+  }, {
+    "uniqueId" : 7,
+    "label" : "ten"
+  }, {
+    "uniqueId" : 8,
+    "label" : "i"
+  }, {
+    "uniqueId" : 9,
+    "label" : "in"
+  }, {
+    "uniqueId" : 10,
+    "label" : "inn"
+  } ],
+  "edges" : [ {
+    "uniqueId" : 0,
+    "label" : "A",
+    "orientations" : {
+      "0" : false,
+      "1" : true
+    }
+  }, {
+    "uniqueId" : 1,
+    "label" : "t",
+    "orientations" : {
+      "0" : false,
+      "2" : true
+    }
+  }, {
+    "uniqueId" : 2,
+    "label" : "o",
+    "orientations" : {
+      "2" : false,
+      "3" : true
+    }
+  }, {
+    "uniqueId" : 3,
+    "label" : "e",
+    "orientations" : {
+      "2" : false,
+      "4" : true
+    }
+  }, {
+    "uniqueId" : 4,
+    "label" : "a",
+    "orientations" : {
+      "4" : false,
+      "5" : true
+    }
+  }, {
+    "uniqueId" : 5,
+    "label" : "d",
+    "orientations" : {
+      "4" : false,
+      "6" : true
+    }
+  }, {
+    "uniqueId" : 6,
+    "label" : "n",
+    "orientations" : {
+      "4" : false,
+      "7" : true
+    }
+  }, {
+    "uniqueId" : 7,
+    "label" : "i",
+    "orientations" : {
+      "0" : false,
+      "8" : true
+    }
+  }, {
+    "uniqueId" : 8,
+    "label" : "n",
+    "orientations" : {
+      "8" : false,
+      "9" : true
+    }
+  }, {
+    "uniqueId" : 9,
+    "label" : "n",
+    "orientations" : {
+      "9" : false,
+      "10" : true
+    }
+  } ]
+}
+
+{"uniqueId":0,"label":"A","orientations":{"0":false,"1":true}}
+{"uniqueId":1,"label":"t","orientations":{"0":false,"2":true}}
+{"uniqueId":2,"label":"o","orientations":{"2":false,"3":true}}
+{"uniqueId":3,"label":"e","orientations":{"2":false,"4":true}}
+{"uniqueId":4,"label":"a","orientations":{"4":false,"5":true}}
+{"uniqueId":5,"label":"d","orientations":{"4":false,"6":true}}
+{"uniqueId":6,"label":"n","orientations":{"4":false,"7":true}}
+{"uniqueId":7,"label":"i","orientations":{"0":false,"8":true}}
+{"uniqueId":8,"label":"n","orientations":{"8":false,"9":true}}
+{"uniqueId":9,"label":"n","orientations":{"9":false,"10":true}}
+Vertex{uniqueId=0, label=}
+Vertex{uniqueId=1, label=A}
+Vertex{uniqueId=2, label=t}
+Vertex{uniqueId=3, label=to}
+Vertex{uniqueId=4, label=te}
+Vertex{uniqueId=5, label=tea}
+Vertex{uniqueId=6, label=ted}
+Vertex{uniqueId=7, label=ten}
+Vertex{uniqueId=8, label=i}
+Vertex{uniqueId=9, label=in}
+Vertex{uniqueId=10, label=inn}
+
+Vertex{uniqueId=0, label=}
+Vertex{uniqueId=1, label=A}
+Vertex{uniqueId=2, label=t}
+Vertex{uniqueId=3, label=to}
+Vertex{uniqueId=4, label=te}
+Vertex{uniqueId=5, label=tea}
+Vertex{uniqueId=6, label=ted}
+Vertex{uniqueId=7, label=ten}
+Vertex{uniqueId=8, label=i}
+Vertex{uniqueId=9, label=in}
+Vertex{uniqueId=10, label=inn}
+
+Edge{uniqueId=0, label=A, vertices={Vertex{uniqueId=0, label=}=false, Vertex{uniqueId=1, label=A}=true}}
+Edge{uniqueId=1, label=t, vertices={Vertex{uniqueId=0, label=}=false, Vertex{uniqueId=2, label=t}=true}}
+Edge{uniqueId=2, label=o, vertices={Vertex{uniqueId=2, label=t}=false, Vertex{uniqueId=3, label=to}=true}}
+Edge{uniqueId=3, label=e, vertices={Vertex{uniqueId=2, label=t}=false, Vertex{uniqueId=4, label=te}=true}}
+Edge{uniqueId=4, label=a, vertices={Vertex{uniqueId=4, label=te}=false, Vertex{uniqueId=5, label=tea}=true}}
+Edge{uniqueId=5, label=d, vertices={Vertex{uniqueId=4, label=te}=false, Vertex{uniqueId=6, label=ted}=true}}
+Edge{uniqueId=6, label=n, vertices={Vertex{uniqueId=4, label=te}=false, Vertex{uniqueId=7, label=ten}=true}}
+Edge{uniqueId=7, label=i, vertices={Vertex{uniqueId=0, label=}=false, Vertex{uniqueId=8, label=i}=true}}
+Edge{uniqueId=8, label=n, vertices={Vertex{uniqueId=8, label=i}=false, Vertex{uniqueId=9, label=in}=true}}
+Edge{uniqueId=9, label=n, vertices={Vertex{uniqueId=9, label=in}=false, Vertex{uniqueId=10, label=inn}=true}}
+
+Edge{uniqueId=0, label=A, vertices={Vertex{uniqueId=0, label=}=false, Vertex{uniqueId=1, label=A}=true}}
+Edge{uniqueId=1, label=t, vertices={Vertex{uniqueId=0, label=}=false, Vertex{uniqueId=2, label=t}=true}}
+Edge{uniqueId=2, label=o, vertices={Vertex{uniqueId=2, label=t}=false, Vertex{uniqueId=3, label=to}=true}}
+Edge{uniqueId=3, label=e, vertices={Vertex{uniqueId=2, label=t}=false, Vertex{uniqueId=4, label=te}=true}}
+Edge{uniqueId=4, label=a, vertices={Vertex{uniqueId=4, label=te}=false, Vertex{uniqueId=5, label=tea}=true}}
+Edge{uniqueId=5, label=d, vertices={Vertex{uniqueId=4, label=te}=false, Vertex{uniqueId=6, label=ted}=true}}
+Edge{uniqueId=6, label=n, vertices={Vertex{uniqueId=4, label=te}=false, Vertex{uniqueId=7, label=ten}=true}}
+Edge{uniqueId=7, label=i, vertices={Vertex{uniqueId=0, label=}=false, Vertex{uniqueId=8, label=i}=true}}
+Edge{uniqueId=8, label=n, vertices={Vertex{uniqueId=8, label=i}=false, Vertex{uniqueId=9, label=in}=true}}
+Edge{uniqueId=9, label=n, vertices={Vertex{uniqueId=9, label=in}=false, Vertex{uniqueId=10, label=inn}=true}}
+
+
+*/

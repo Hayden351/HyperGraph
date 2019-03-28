@@ -20,17 +20,25 @@ public class Vertex implements Comparable<Vertex>
     {
         this("");
     }
+    
+    public Vertex(String label)
+    {
+        this(vertexId++, label);
+    }
+
+    Vertex (int id, String label)
+    {
+        uniqueId = id;
+        if (vertexId <= uniqueId)
+            vertexId = uniqueId + 1;
+        
+        this.label = label;
+    }
 
     @Override
     public String toString ()
     {
         return "Vertex{" + "uniqueId=" + uniqueId + ", label=" + label + '}';
-    }
-
-    public Vertex(String label)
-    {
-        uniqueId = vertexId++;
-        this.label = label;
     }
 
     @Override

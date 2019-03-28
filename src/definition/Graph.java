@@ -1,5 +1,6 @@
 package definition;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -151,13 +152,13 @@ public class Graph
                 v -> String.format("(%s~%s)", v.uniqueId, v.label)
             ).collect(Collectors.toList())));
             out.println(String.join(",", G.edges.stream().map(
-                x -> String.format("(%s~%s~%s)", x.uniqueId, x.label, x.vertices.entrySet().stream().map(p -> String.format("((%s~%s)~%s)", p.getKey().uniqueId, p.getKey().label, p.getValue())).collect(Collectors.toList()))
+                x -> String.format("(%s~%s~%s)", x.uniqueId, x.label, x.orientations.entrySet().stream().map(p -> String.format("((%s~%s)~%s)", p.getKey().uniqueId, p.getKey().label, p.getValue())).collect(Collectors.toList()))
             ).collect(Collectors.toList())));
             System.out.println(String.join(",", G.vertices.stream().map(
                 x -> String.format("(%s~%s)", x.uniqueId, x.label)
             ).collect(Collectors.toList())));
             System.out.println(String.join(",", G.edges.stream().map(
-                x -> String.format("(%s~%s~%s)", x.uniqueId, x.label, x.vertices.entrySet().stream().map(p -> String.format("((%s~%s)~%s)", p.getKey().uniqueId, p.getKey().label, p.getValue())).collect(Collectors.toList()))
+                x -> String.format("(%s~%s~%s)", x.uniqueId, x.label, x.orientations.entrySet().stream().map(p -> String.format("((%s~%s)~%s)", p.getKey().uniqueId, p.getKey().label, p.getValue())).collect(Collectors.toList()))
             ).collect(Collectors.toList())));
             return true;
         } catch (FileNotFoundException ex) {}
@@ -177,6 +178,65 @@ public class Graph
             
             return G;
         } catch (IOException ex) {}
+        return null;
+    }
+
+    public void addAllVertices (Vertex[] vertices)
+    {
+        for (Vertex v : vertices)
+            this.addVertex(v);
+    }
+    
+    public static Graph unmarshallGraph(JsonNode json)
+    {
+        Graph G = new Graph();
+        JsonNode vertices = json.get("vertices");
+        
+        json.get("vertices").elements().forEachRemaining(vertexJson ->
+        {
+            int uniqueId = vertexJson.get("uniqueId").asInt();
+            String label = vertexJson.get("label").asText();
+            G.addVertex(new Vertex(uniqueId, label));
+        });
+        
+        json.get("edges").elements().forEachRemaining(edgeJson ->
+        {
+            System.out.println(edgeJson);
+            G.addEdge(unmarshallEdge(G, edgeJson));
+        });
+        return G;
+    }
+    
+    
+    // assumes G has already populated its vertices from json
+    // because it relies on the vertex ids
+    public static Edge unmarshallEdge(Graph G, JsonNode json)
+    {
+        int uniqueId = json.get("uniqueId").asInt();
+        String label = json.get("label").asText();
+        Map<Vertex, Boolean> orientations = new TreeMap<>();
+        JsonNode orientationJson = json.get("orientations");
+        orientationJson.fieldNames().forEachRemaining(field ->
+        {
+            orientations.put(G.findVertexById(Integer.parseInt(field)), orientationJson.get(field).asBoolean());
+        });
+        
+        return new Edge(uniqueId, label, orientations);
+    }
+    
+    public Vertex findVertexById(int id)
+    {
+        for (Vertex v : this.vertices)
+            if (v.uniqueId == id)
+                return v;
+        return null;
+    }
+
+    public Edge findEdgeById (int id)
+    {
+        for (Edge e : this.edges)
+            if (e.uniqueId == id)
+                return e;
         return null;
     }
 }

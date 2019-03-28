@@ -19,7 +19,7 @@ public class GraphProperties
 {
     public static boolean isSelfLoop (Edge e)
     {
-        return e.vertices.keySet().size() == 1;
+        return e.orientations.keySet().size() == 1;
     }
     
     // two vertices are neighbors if they are connected by an edge
@@ -28,8 +28,8 @@ public class GraphProperties
         Set<Vertex> neighbors = new HashSet<>();
         Vertex v = G.getVertexById(vid);
         for (Edge e : G.edges)
-            if (e.vertices.keySet().contains(v))
-                neighbors.addAll(e.vertices.keySet());
+            if (e.orientations.keySet().contains(v))
+                neighbors.addAll(e.orientations.keySet());
        return neighbors;
     }
     public static Set<Vertex> getNeighbors (Graph G, int vid)
@@ -37,8 +37,8 @@ public class GraphProperties
         Set<Vertex> neighbors = new HashSet<>();
         Vertex v = G.getVertexById(vid);
         for (Edge e : G.edges)
-            if (e.vertices.keySet().contains(v))
-                neighbors.addAll(e.vertices.keySet());
+            if (e.orientations.keySet().contains(v))
+                neighbors.addAll(e.orientations.keySet());
         neighbors.remove(v);
         return neighbors;
     }
@@ -46,8 +46,8 @@ public class GraphProperties
     {
         Set<Vertex> neighbors = new HashSet<>();
         for (Edge e : G.edges)
-            if (e.vertices.keySet().contains(v))
-                neighbors.addAll(e.vertices.keySet());
+            if (e.orientations.keySet().contains(v))
+                neighbors.addAll(e.orientations.keySet());
        return neighbors;
     }
      
@@ -60,8 +60,8 @@ public class GraphProperties
     {
         Set<Vertex> neighbors = new HashSet<>();
         for (Edge e : edges)
-            if (e.vertices.keySet().contains(v))
-                neighbors.addAll(e.vertices.keySet());
+            if (e.orientations.keySet().contains(v))
+                neighbors.addAll(e.orientations.keySet());
         neighbors.remove(v);
         return neighbors;
     }
@@ -72,9 +72,9 @@ public class GraphProperties
         Set<Vertex> neighbors = new HashSet<>();
         for (Edge e : G.edges)
             // cannot be oriented towards v (to be consistent with a 2-hypergraph)
-            if (e.vertices.keySet().contains(v) && !e.vertices.get(v))
+            if (e.orientations.keySet().contains(v) && !e.orientations.get(v))
                 for (Vertex u : e.vertices())
-                    if (e.vertices.get(u)) // is oriented towards u
+                    if (e.orientations.get(u)) // is oriented towards u
                         neighbors.add(u);
         return neighbors;
     }

@@ -57,7 +57,7 @@ public class Utils
         //        for (Edge e : G.edges)
         //            System.out.println(e);
         for (Edge e : G.edges)
-            if (!containsAll(G.vertices, e.vertices.keySet()))
+            if (!containsAll(G.vertices, e.orientations.keySet()))
                 System.out.println(e);
     }
 
